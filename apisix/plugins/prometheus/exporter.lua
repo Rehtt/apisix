@@ -98,7 +98,7 @@ function _M.init()
     -- no consumer in request.
     metrics.status = prometheus:counter("http_status",
             "HTTP status codes per service in APISIX",
-            {"code", "route", "matched_uri", "matched_host", "service", "consumer", "node"})
+            {"code", "route", "matched_uri", "matched_host", "route_name", "service", "consumer", "node"})
 
     metrics.latency = prometheus:histogram("http_latency",
         "HTTP request latency in milliseconds per service in APISIX",
@@ -114,6 +114,7 @@ end
 function _M.log(conf, ctx)
     local vars = ctx.var
 
+    local route_name = ""
     local route_id = ""
     local balancer_ip = ctx.balancer_ip or ""
     local service_id = ""
@@ -122,6 +123,7 @@ function _M.log(conf, ctx)
     local matched_route = ctx.matched_route and ctx.matched_route.value
     if matched_route then
         route_id = matched_route.id
+        route_name = matched_route.name
         service_id = matched_route.service_id or ""
         if conf.prefer_name == true then
             route_id = matched_route.name or route_id
@@ -140,7 +142,7 @@ function _M.log(conf, ctx)
     end
 
     metrics.status:inc(1,
-        gen_arr(vars.status, route_id, matched_uri, matched_host,
+        gen_arr(vars.status, route_id, matched_uri, matched_host, route_name,
                 service_id, consumer_name, balancer_ip))
 
     local latency = (ngx.now() - ngx.req.start_time()) * 1000
